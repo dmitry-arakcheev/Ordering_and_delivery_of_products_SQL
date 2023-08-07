@@ -14,7 +14,7 @@ WITH sq1 AS (SELECT time,
                     courier_id,
                     MIN(time) OVER (PARTITION BY courier_id) AS courier_first_day
              FROM   user_actions
-					FULL JOIN courier_actions USING(time))
+		    FULL JOIN courier_actions USING(time))
 SELECT date,
        new_users,
        new_couriers,
@@ -43,7 +43,7 @@ WITH sq1 AS (SELECT time,
                     courier_id,
                     MIN(time) OVER (PARTITION BY courier_id) AS courier_first_day
              FROM   user_actions
-					FULL JOIN courier_actions USING(time)),
+		    FULL JOIN courier_actions USING(time)),
 sq2 AS (SELECT    time::DATE as date,
                   COUNT(DISTINCT user_id) filter (WHERE time = user_first_day) AS new_users,
                   COUNT(DISTINCT courier_id) filter (WHERE time = courier_first_day) AS new_couriers
@@ -92,13 +92,16 @@ sq2 AS (SELECT
             time::DATE AS date,
             COUNT(DISTINCT user_id) FILTER (WHERE time = user_first_day) AS new_users,
             COUNT(DISTINCT user_id) FILTER (WHERE user_order_id NOT IN (SELECT order_id
-																		FROM user_actions
-																		WHERE action = 'cancel_order')) AS paying_users,
+									FROM user_actions
+									WHERE action = 'cancel_order')) AS paying_users,
             COUNT(DISTINCT courier_id) FILTER (WHERE time = courier_first_day) AS new_couriers,
             COUNT(DISTINCT courier_id) FILTER (WHERE (courier_action = 'accept_order'
-													  AND
-													  courier_order_id IN (SELECT order_id FROM courier_actions WHERE action ='deliver_order'))
-													  OR courier_action = 'deliver_order') AS active_couriers
+						      AND
+						      courier_order_id IN (SELECT order_id
+									   FROM courier_actions
+									   WHERE action ='deliver_order')
+						      )
+						      OR courier_action = 'deliver_order') AS active_couriers
         FROM
             sq1
         GROUP BY
@@ -135,8 +138,8 @@ WITH sq1 AS (SELECT
                 user_actions
             WHERE
                 order_id NOT IN (SELECT order_id
-								 FROM user_actions
-								 WHERE action = 'cancel_order')
+				 FROM user_actions
+				 WHERE action = 'cancel_order')
             GROUP BY
                 date,
                 user_id)
@@ -167,31 +170,43 @@ ______________________________________
 - Долю первых заказов в общем числе заказов (долю п.2 в п.1).
 - Долю заказов новых пользователей в общем числе заказов (долю п.3 в п.1). */
 
-WITH sq1 AS (SELECT	time::DATE AS date,
-					user_id,
-					order_id,
-					(MIN(time) OVER (PARTITION BY user_id))::DATE AS user_first_day,
-					CASE
-					WHEN order_id IN (SELECT MIN(order_id) FROM user_actions WHERE order_id NOT IN (SELECT order_id FROM user_actions WHERE action = 'cancel_order') GROUP BY user_id) THEN 'first_order'
-					END AS user_first_order,
-					CASE
-					WHEN time::DATE = (MIN(time) OVER (PARTITION BY user_id))::DATE THEN 'order_as_new_user'
-					END AS orders_as_new_user
-			FROM	user_actions)
-SELECT  date,
-		total_orders_by_day AS orders,
-		first_orders,
-		new_users_orders,
-		ROUND(100 * first_orders::DECIMAL / total_orders_by_day, 2) AS first_orders_share,
-		ROUND(100 * new_users_orders::DECIMAL / total_orders_by_day, 2) AS new_users_orders_share
+WITH sq1 AS (SELECT	
+		time::DATE AS date,
+		user_id,
+		order_id,
+		(MIN(time) OVER (PARTITION BY user_id))::DATE AS user_first_day,
+		CASE
+		WHEN order_id IN (SELECT MIN(order_id)
+				  FROM user_actions
+				  WHERE order_id NOT IN (SELECT order_id
+							 FROM user_actions
+							 WHERE action = 'cancel_order')
+				  GROUP BY user_id) THEN 'first_order'
+		END AS user_first_order,
+		CASE
+		WHEN time::DATE = (MIN(time) OVER (PARTITION BY user_id))::DATE THEN 'order_as_new_user'
+		END AS orders_as_new_user
+	    FROM
+		user_actions)
+SELECT  
+	date,
+	total_orders_by_day AS orders,
+	first_orders,
+	new_users_orders,
+	ROUND(100 * first_orders::DECIMAL / total_orders_by_day, 2) AS first_orders_share,
+	ROUND(100 * new_users_orders::DECIMAL / total_orders_by_day, 2) AS new_users_orders_share
 FROM
-	(SELECT  date,
-			 COUNT(DISTINCT order_id) AS total_orders_by_day,
-			 COUNT(DISTINCT order_id) FILTER (WHERE user_first_order = 'first_order') AS first_orders,
-			 COUNT(DISTINCT order_id) FILTER (WHERE orders_as_new_user = 'order_as_new_user') AS new_users_orders
-	FROM     sq1
-	WHERE	 order_id NOT IN (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
-	GROUP BY date) AS sq2
+	(SELECT  
+		date,
+		COUNT(DISTINCT order_id) AS total_orders_by_day,
+		COUNT(DISTINCT order_id) FILTER (WHERE user_first_order = 'first_order') AS first_orders,
+		COUNT(DISTINCT order_id) FILTER (WHERE orders_as_new_user = 'order_as_new_user') AS new_users_orders
+	FROM    
+		sq1
+	WHERE	
+		order_id NOT IN (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+	GROUP BY
+		date) AS sq2
 ORDER BY  date;
 
 ______________________________________
@@ -209,28 +224,33 @@ WITH sq1 AS (SELECT time,
                     courier_actions.order_id AS courier_order_id,
                     courier_actions.action AS courier_action
              FROM   user_actions
-					FULL JOIN courier_actions USING(time)),
-sq2 AS (SELECT time::DATE AS date,
-               COUNT(DISTINCT user_id) FILTER (WHERE user_order_id NOT IN (SELECT order_id
-																		   FROM   user_actions
-                                                                           WHERE  action = 'cancel_order')) AS paying_users,
-			   COUNT(DISTINCT courier_id) FILTER (WHERE  (courier_action = 'accept_order' 
-														  AND
-														  courier_order_id IN (SELECT order_id
-                                                                               FROM   courier_actions
-                                                                               WHERE  action = 'deliver_order')
-														  )
+		    FULL JOIN courier_actions USING(time)),
+sq2 AS (SELECT 
+		time::DATE AS date,
+                COUNT(DISTINCT user_id) FILTER (WHERE user_order_id NOT IN (SELECT order_id
+		 							    FROM   user_actions
+                                                                            WHERE  action = 'cancel_order')) AS paying_users,
+		COUNT(DISTINCT courier_id) FILTER (WHERE  (courier_action = 'accept_order' 
+							   AND
+							   courier_order_id IN (SELECT order_id
+                                                                                FROM   courier_actions
+                                                                                WHERE  action = 'deliver_order')
+							   )
                                                           OR courier_action = 'deliver_order') AS active_couriers,
-			   COUNT(DISTINCT user_order_id) FILTER (WHERE  user_order_id NOT IN (SELECT order_id
-                                                                                  FROM   user_actions
-                                                                                  WHERE  action = 'cancel_order')) AS total_orders
-        FROM   sq1
-        GROUP BY date)
+		 COUNT(DISTINCT user_order_id) FILTER (WHERE  user_order_id NOT IN (SELECT order_id
+                                                                                    FROM   user_actions
+                                                                                    WHERE  action = 'cancel_order')) AS total_orders
+        FROM   
+		sq1
+        GROUP BY
+		date)
 
-SELECT date,
-       ROUND(paying_users::DECIMAL / active_couriers, 2) AS users_per_courier ,
-       ROUND(total_orders::decimal / active_couriers, 2) AS orders_per_courier
-FROM   sq2;
+SELECT 
+	date,
+       	ROUND(paying_users::DECIMAL / active_couriers, 2) AS users_per_courier ,
+       	ROUND(total_orders::decimal / active_couriers, 2) AS orders_per_courier
+FROM   
+	sq2;
 
 ______________________________________
 
