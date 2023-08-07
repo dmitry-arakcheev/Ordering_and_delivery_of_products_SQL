@@ -299,13 +299,13 @@ sq2 AS (SELECT
         FROM
             products),
 sq3 AS (SELECT
-			name,
-			SUM(price) AS revenue
-		FROM
-			sq1
-			INNER JOIN sq2 USING (product_id)
-		GROUP BY
-			name)
+	    name,
+ 	    SUM(price) AS revenue
+	FROM
+	   sq1
+	   INNER JOIN sq2 USING (product_id)
+	GROUP BY
+	   name)
 
 SELECT
     product_name,
