@@ -49,10 +49,10 @@ SQL-analysis of an ordering and delivery service
 | name | VARCHAR(50) | название товара |
 | price | FLOAT(4) | цена товара |
 
-Связи между таблицами:
-user_actions.user_id - users.user_id
-user_actions.order_id - orders.order_id
-orders.product_ids - products.product_id
-courier_actions.courier_id - couriers.courier_id
-courier_actions.order_id - orders.order_id
-courier_actions.time - user_actions.time
+Связи между таблицами:  
+user_actions.user_id - users.user_id  
+user_actions.order_id - orders.order_id  
+orders.product_ids - products.product_id  
+courier_actions.courier_id - couriers.courier_id  
+courier_actions.order_id - orders.order_id  
+courier_actions.time - user_actions.time  
